@@ -1,13 +1,13 @@
 # Pharmacy Management System
 
-A console-based Pharmacy Management System written in C.
+A Terminal-based Pharmacy Management System written in C.
 
 ## Files
 
 - `pharmacy_management.c` — the full source code.
 
 The following files are created automatically the first time you run the
-program (they are not included in this zip, since they get generated fresh):
+program
 
 - `inventory.txt` — stores medicine ID, name, price and stock. Updated
   automatically after every purchase or restock, so quantities are
@@ -20,19 +20,19 @@ program (they are not included in this zip, since they get generated fresh):
 
 Using GCC:
 
-```
+```bash
 gcc -o pharmacy pharmacy_management.c
 ```
 
 ## How to Run
 
-```
+```bash
 ./pharmacy
 ```
 
 On Windows (after compiling with GCC/MinGW or an IDE like Code::Blocks):
 
-```
+```bat
 pharmacy.exe
 ```
 

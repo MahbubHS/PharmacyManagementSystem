@@ -1,13 +1,14 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
+#include <ctype.h>
 
 #define MAX_MEDICINES 10
 #define MAX_MEMBERS 5
 #define MAX_CART 20
 #define MAX_CUSTOMERS 100
 
-/* One medicine record: id, name, price and how many are in stock */
+/* Medicine record */
 struct Medicine
 {
     int id;
@@ -16,7 +17,7 @@ struct Medicine
     int stock;
 };
 
-/* One line item inside a customer's shopping cart */
+/* Cart item */
 struct CartItem
 {
     int id;
@@ -26,7 +27,7 @@ struct CartItem
     float total;
 };
 
-/* Function prototypes (declared here so they can be used in any order below) */
+/* Function prototypes */
 void loadInventory(struct Medicine medicines[], int n);
 void saveInventory(struct Medicine medicines[], int n);
 void displayMedicines(struct Medicine medicines[], int n);
@@ -40,11 +41,10 @@ void saveReceipt(struct CartItem cart[], int cartCount, float subtotal, float me
 void logSale(struct CartItem cart[], int cartCount, char customerName[], char membershipNo[], char dateStr[], char timeStr[]);
 void restockMedicine(struct Medicine medicines[], int n);
 void getDateTimeStrings(char dateStr[], char timeStr[], char monthYearStr[]);
+void clearInputBuffer(void);
 void showSalesReport(struct Medicine medicines[], int n);
 
-/* Reads inventory.txt (the "database" file) and fills the medicines array
-   with the saved id, name, price and stock. If the file does not exist yet
-   (first run), it simply keeps the default values and creates the file. */
+/* Load inventory from file or create file */
 void loadInventory(struct Medicine medicines[], int n)
 {
     FILE *fp = fopen("inventory.txt", "r");
@@ -65,9 +65,7 @@ void loadInventory(struct Medicine medicines[], int n)
     fclose(fp);
 }
 
-/* Writes the current medicines array back into inventory.txt so the stock
-   levels are remembered the next time the program is started. This is
-   called after every purchase and every restock. */
+/* Save inventory to file */
 void saveInventory(struct Medicine medicines[], int n)
 {
     FILE *fp = fopen("inventory.txt", "w");
@@ -87,8 +85,15 @@ void saveInventory(struct Medicine medicines[], int n)
     fclose(fp);
 }
 
-/* Prints the ID, Name, Price and Stock of every medicine in a simple table.
-   Shows "Out of Stock" instead of 0 when there is nothing left. */
+/* Discard the rest of the current input line */
+void clearInputBuffer(void)
+{
+    int c;
+    while ((c = getchar()) != '\n' && c != EOF)
+        ;
+}
+
+/* Print medicine list */
 void displayMedicines(struct Medicine medicines[], int n)
 {
     int i;
@@ -108,16 +113,14 @@ void displayMedicines(struct Medicine medicines[], int n)
     }
 }
 
-/* Same table as above, just with a heading, used for the "View Inventory"
-   menu option. */
+/* Print inventory heading and table */
 void displayInventory(struct Medicine medicines[], int n)
 {
     printf("\n--- Current Inventory ---\n");
     displayMedicines(medicines, n);
 }
 
-/* Looks through the medicines array for a matching ID.
-   Returns the array index if found, or -1 if not found. */
+/* Find medicine by ID */
 int searchMedicineByID(struct Medicine medicines[], int n, int id)
 {
     int i;
@@ -131,8 +134,7 @@ int searchMedicineByID(struct Medicine medicines[], int n, int id)
     return -1;
 }
 
-/* Looks through the medicines array for a matching name.
-   Returns the array index if found, or -1 if not found. */
+/* Find medicine by name */
 int searchMedicineByName(struct Medicine medicines[], int n, char name[])
 {
     int i;
@@ -146,26 +148,40 @@ int searchMedicineByName(struct Medicine medicines[], int n, char name[])
     return -1;
 }
 
-/* Lets the user search either by Medicine ID or by Medicine Name and
-   prints the details of the medicine if it is found. */
+/* Search and display medicine */
 void searchMedicine(struct Medicine medicines[], int n)
 {
     int choice, id, index;
     char name[30];
 
     printf("\nSearch by:\n1. Medicine ID\n2. Medicine Name\nEnter Choice: ");
-    scanf("%d", &choice);
+    if (scanf("%d", &choice) != 1)
+    {
+        printf("Invalid Choice.\n");
+        clearInputBuffer();
+        return;
+    }
 
     if (choice == 1)
     {
         printf("Enter Medicine ID: ");
-        scanf("%d", &id);
+        if (scanf("%d", &id) != 1)
+        {
+            printf("Invalid ID.\n");
+            clearInputBuffer();
+            return;
+        }
         index = searchMedicineByID(medicines, n, id);
     }
     else if (choice == 2)
     {
         printf("Enter Medicine Name: ");
-        scanf("%s", name);
+        if (scanf("%29s", name) != 1)
+        {
+            printf("Invalid input.\n");
+            clearInputBuffer();
+            return;
+        }
         index = searchMedicineByName(medicines, n, name);
     }
     else
@@ -194,9 +210,7 @@ void searchMedicine(struct Medicine medicines[], int n)
     }
 }
 
-/* Handles a full purchase: asks for customer details, lets the customer
-   buy one or more medicines (validating ID, quantity and stock each time),
-   then generates the bill, saves the receipt and logs the sale. */
+/* Process purchase, then bill and log sale */
 void purchaseMedicine(struct Medicine medicines[], int n, char members[][10], int memberCount)
 {
     struct CartItem cart[MAX_CART];
@@ -209,7 +223,7 @@ void purchaseMedicine(struct Medicine medicines[], int n, char members[][10], in
     float subtotal = 0;
     int isMember = 0;
 
-    /* Ask for customer name and make sure it is not left empty */
+    /* Read customer name */
     printf("\nEnter Customer Name: ");
     getchar();
     do
@@ -222,7 +236,7 @@ void purchaseMedicine(struct Medicine medicines[], int n, char members[][10], in
         }
     } while (strlen(customerName) == 0);
 
-    /* Ask for membership number and check it against the predefined list */
+    /* Read membership number */
     printf("Enter Membership Number (or 0 if none): ");
     fgets(membershipNo, sizeof(membershipNo), stdin);
     membershipNo[strcspn(membershipNo, "\n")] = '\0';
@@ -236,8 +250,7 @@ void purchaseMedicine(struct Medicine medicines[], int n, char members[][10], in
         }
     }
 
-    /* Shopping loop: keep adding medicines to the cart until the
-       customer says they are done */
+    /* Add items to cart */
     do
     {
         printf("\nMedicine ID: ");
@@ -301,7 +314,11 @@ void purchaseMedicine(struct Medicine medicines[], int n, char members[][10], in
         }
 
         printf("Do you want to buy more? (Y/N): ");
-        scanf(" %c", &choice);
+        if (scanf(" %c", &choice) != 1)
+        {
+            clearInputBuffer();
+            break;
+        }
 
     } while (choice == 'Y' || choice == 'y');
 
@@ -311,14 +328,13 @@ void purchaseMedicine(struct Medicine medicines[], int n, char members[][10], in
         return;
     }
 
-    /* Stock changed, so save the updated inventory to the database file */
+    /* Save updated inventory */
     saveInventory(medicines, n);
 
     generateBill(cart, cartCount, subtotal, customerName, membershipNo, isMember);
 }
 
-/* Works out the discount, VAT and final payable amount, prints the
-   receipt on screen, then saves it to a file and logs the sale. */
+/* Calculate totals, print receipt, save and log */
 void generateBill(struct CartItem cart[], int cartCount, float subtotal, char customerName[], char membershipNo[], int isMember)
 {
     int i;
@@ -379,9 +395,7 @@ void generateBill(struct CartItem cart[], int cartCount, float subtotal, char cu
     logSale(cart, cartCount, customerName, membershipNo, dateStr, timeStr);
 }
 
-/* Saves the receipt that was just printed on screen into a text file
-   named after the membership number, or the customer name if there is
-   no membership number. */
+/* Save receipt to text file */
 void saveReceipt(struct CartItem cart[], int cartCount, float subtotal, float membershipDiscount, float bulkDiscount, float vat, float netPayable, int totalQty, char customerName[], char membershipNo[], char dateStr[], char timeStr[])
 {
     char filename[80];
@@ -389,7 +403,7 @@ void saveReceipt(struct CartItem cart[], int cartCount, float subtotal, float me
 
     if (strcmp(membershipNo, "0") != 0 && strlen(membershipNo) > 0)
     {
-        sprintf(filename, "Receipt_%s.txt", membershipNo);
+        snprintf(filename, sizeof(filename), "Receipt_%s.txt", membershipNo);
     }
     else
     {
@@ -397,12 +411,12 @@ void saveReceipt(struct CartItem cart[], int cartCount, float subtotal, float me
         strcpy(nameCopy, customerName);
         for (i = 0; nameCopy[i] != '\0'; i++)
         {
-            if (nameCopy[i] == ' ')
+            if (!(isalnum((unsigned char)nameCopy[i]) || nameCopy[i] == '_' || nameCopy[i] == '-'))
             {
                 nameCopy[i] = '_';
             }
         }
-        sprintf(filename, "Receipt_%s.txt", nameCopy);
+        snprintf(filename, sizeof(filename), "Receipt_%s.txt", nameCopy);
     }
 
     FILE *fp = fopen(filename, "w");
@@ -445,11 +459,7 @@ void saveReceipt(struct CartItem cart[], int cartCount, float subtotal, float me
     printf("Receipt saved to %s\n", filename);
 }
 
-/* Appends one line per purchased medicine to sales.txt. This file is the
-   "database" of every sale ever made and is later read by
-   showSalesReport() to work out best selling medicine, top customer,
-   today's sales and monthly sales. Spaces in the customer name are
-   replaced with underscores so the file stays easy to read with commas. */
+/* Log sale entries to sales.txt */
 void logSale(struct CartItem cart[], int cartCount, char customerName[], char membershipNo[], char dateStr[], char timeStr[])
 {
     FILE *fp = fopen("sales.txt", "a");
@@ -465,7 +475,7 @@ void logSale(struct CartItem cart[], int cartCount, char customerName[], char me
     strcpy(nameCopy, customerName);
     for (i = 0; nameCopy[i] != '\0'; i++)
     {
-        if (nameCopy[i] == ' ')
+        if (!(isalnum((unsigned char)nameCopy[i]) || nameCopy[i] == '_' || nameCopy[i] == '-'))
         {
             nameCopy[i] = '_';
         }
@@ -481,14 +491,18 @@ void logSale(struct CartItem cart[], int cartCount, char customerName[], char me
     fclose(fp);
 }
 
-/* Increases the stock of one medicine and saves the updated inventory
-   to the database file straight away. */
+/* Restock medicine and save inventory */
 void restockMedicine(struct Medicine medicines[], int n)
 {
     int id, qty, index;
 
     printf("\nEnter Medicine ID to Restock: ");
-    scanf("%d", &id);
+    if (scanf("%d", &id) != 1)
+    {
+        printf("Invalid Medicine ID.\n");
+        clearInputBuffer();
+        return;
+    }
 
     index = searchMedicineByID(medicines, n, id);
     if (index == -1)
@@ -498,7 +512,12 @@ void restockMedicine(struct Medicine medicines[], int n)
     }
 
     printf("Enter Quantity to Add: ");
-    scanf("%d", &qty);
+    if (scanf("%d", &qty) != 1)
+    {
+        printf("Invalid Quantity.\n");
+        clearInputBuffer();
+        return;
+    }
 
     if (qty <= 0)
     {
@@ -511,9 +530,7 @@ void restockMedicine(struct Medicine medicines[], int n)
     printf("Stock updated. New Stock for %s: %d\n", medicines[index].name, medicines[index].stock);
 }
 
-/* Builds three text versions of "right now": a date (DD-MM-YYYY), a time
-   (HH:MM:SS) and a month-year (MM-YYYY). These are used on receipts, in
-   the sales log, and to filter today's / this month's sales. */
+/* Build date/time strings */
 void getDateTimeStrings(char dateStr[], char timeStr[], char monthYearStr[])
 {
     time_t now = time(NULL);
@@ -524,11 +541,7 @@ void getDateTimeStrings(char dateStr[], char timeStr[], char monthYearStr[])
     sprintf(monthYearStr, "%02d-%04d", t->tm_mon + 1, t->tm_year + 1900);
 }
 
-/* Reads every line of sales.txt and works out:
-   - Best Selling Medicine (highest total quantity sold)
-   - Top Customer (highest total amount spent)
-   - Today's Sales (total revenue for today's date)
-   - This Month's Sales (total revenue for the current month) */
+/* Generate sales report */
 void showSalesReport(struct Medicine medicines[], int n)
 {
     FILE *fp = fopen("sales.txt", "r");
@@ -567,15 +580,14 @@ void showSalesReport(struct Medicine medicines[], int n)
             continue;
         }
 
-        /* Add this sale's quantity to the matching medicine's running total */
+        /* Add sold quantity by medicine */
         index = searchMedicineByID(medicines, n, id);
         if (index != -1)
         {
             soldQty[index] += qty;
         }
 
-        /* Add this sale's amount to the matching customer's running total,
-           or create a new customer entry if this is the first time we see them */
+        /* Track customer spending */
         found = 0;
         for (i = 0; i < custCount; i++)
         {
@@ -593,7 +605,7 @@ void showSalesReport(struct Medicine medicines[], int n)
             custCount++;
         }
 
-        /* Add to today's / this month's running totals if the date matches */
+        /* Add today/month totals */
         if (strcmp(date, todayDate) == 0)
         {
             todaySales += lineTotal;
@@ -608,7 +620,7 @@ void showSalesReport(struct Medicine medicines[], int n)
 
     printf("\n========== SALES REPORT ==========\n");
 
-    /* Find the medicine with the highest quantity sold */
+    /* Best selling medicine */
     int bestIndex = -1;
     for (i = 0; i < n; i++)
     {
@@ -626,7 +638,7 @@ void showSalesReport(struct Medicine medicines[], int n)
         printf("Best Selling Medicine: No sales yet\n");
     }
 
-    /* Find the customer with the highest total spending */
+    /* Top customer */
     if (custCount > 0)
     {
         int topIndex = 0;
@@ -660,8 +672,7 @@ void showSalesReport(struct Medicine medicines[], int n)
 
 int main()
 {
-    /* Default medicine list used only the first time the program runs
-       (after that, the data is loaded from inventory.txt) */
+    /* Default medicine inventory */
     struct Medicine medicines[MAX_MEDICINES] = {
         {101, "Napa", 12, 100},
         {102, "Ace", 15, 80},
@@ -674,13 +685,13 @@ int main()
         {109, "Cetirizine", 7, 55},
         {110, "Ibuprofen", 14, 45}};
 
-    /* Predefined membership numbers that qualify for the 5% discount */
+    /* Membership numbers */
     char members[MAX_MEMBERS][10] = {"0152", "0210", "0333", "0450", "0521"};
 
     int choice;
     int scanResult;
 
-    /* Load saved stock levels from the database file, if one exists */
+    /* Load inventory from file */
     loadInventory(medicines, MAX_MEDICINES);
 
     printf("=====================================\n");
