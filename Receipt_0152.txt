@@ -1,0 +1,16 @@
+------------- RECEIPT -------------
+Shop Name: City Pharmacy
+Customer Name: Saad
+Membership No: 0152
+Date: 04-08-2026  Time: 21:09:01
+------------------------------------
+Medicine          Qty      Price      Total
+Napa                5      12.00      60.00
+Cetirizine          3       7.00      21.00
+------------------------------------
+Total Quantity: 8
+Subtotal: 81.00
+Membership Discount (5%): 4.05
+VAT (5%): 3.85
+Net Payable: 80.80
+------------------------------------

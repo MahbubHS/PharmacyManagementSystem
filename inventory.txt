@@ -1,0 +1,10 @@
+101,Napa,12.00,95
+102,Ace,15.00,80
+103,Seclo,8.00,50
+104,Histacin,5.00,60
+105,ORS,20.00,40
+106,Antacid,10.00,70
+107,Paracetamol,6.00,90
+108,Omeprazole,18.00,30
+109,Cetirizine,7.00,52
+110,Ibuprofen,14.00,45
