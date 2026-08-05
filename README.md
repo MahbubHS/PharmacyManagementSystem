@@ -1,58 +1,47 @@
 # Pharmacy Management System
 
-A Terminal-based Pharmacy Management System written in C.
+A terminal-based pharmacy management application written in C.
 
-## Files
+## Overview
 
-- `pharmacy_management.c` — the full source code.
+This project manages medicine inventory, customer purchases, receipts, and sales reports using file-based persistence.
 
-The following files are created automatically the first time you run the
-program
+## Included Files
 
-- `inventory.txt` — stores medicine ID, name, price and stock. Updated
-  automatically after every purchase or restock, so quantities are
-  remembered the next time the program runs.
-- `sales.txt` — a log of every sale, used to build the Sales Report
-  (best selling medicine, top customer, today's sales, this month's sales).
-- `Receipt_<name or membership>.txt` — one file per purchase receipt.
+- `pharmacy_management.c` — main source code.
+- `inventory.txt` — stores medicine ID, name, price, and stock.
+- `members.txt` — Membership holder customers list.
+- `sales.txt` — logs every sale for reporting.
+- `Receipt_<customer>.txt` — one receipt file is created per purchase.
 
-## How to Compile
+## Features
 
-Using GCC:
+- View all medicines and current stock
+- Search medicines by ID or name
+- Purchase multiple medicines in one visit
+- Apply membership discount and bulk discount
+- Generate and save receipts
+- Restock inventory
+- Generate sales reports with best-selling medicine, top customer, and daily/monthly totals
+
+## Build and Run
+
+Compile with GCC:
 
 ```bash
 gcc -o pharmacy pharmacy_management.c
 ```
 
-## How to Run
+Run the program:
 
 ```bash
 ./pharmacy
 ```
 
-On Windows (after compiling with GCC/MinGW or an IDE like Code::Blocks):
+## Usage Notes
 
-```bat
-pharmacy.exe
-```
-
-## Menu Options
-
-1. Display Medicines
-2. Search Medicine (by ID or Name)
-3. Purchase Medicine (supports buying multiple medicines in one visit)
-4. Restock Medicine
-5. View Inventory
-6. Sales Report
-7. Exit
-
-## Notes
-
-- Stock levels persist between runs through `inventory.txt` — the program
-  is not reset each time you start it.
-- Membership numbers `0152`, `0210`, `0333`, `0450`, `0521` qualify for a
-  5% discount. Enter `0` if the customer has no membership.
-- A 10% bulk discount applies automatically if the subtotal exceeds 5000.
+- Inventory persists between runs via `inventory.txt`.
+- Membership discounts are validated against `members.txt`.
+- A 10% bulk discount applies when the subtotal exceeds 5000.
 - VAT of 5% is applied after discounts.
-- If you want to start fresh with the original sample stock, just delete
-  `inventory.txt` and `sales.txt` before running the program again.
+- To reset stock and sales data, delete `inventory.txt` and `sales.txt`.
