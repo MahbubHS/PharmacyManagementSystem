@@ -26,6 +26,22 @@ struct CartItem
     float total;
 };
 
+/* Function prototypes (declared here so they can be used in any order below) */
+void loadInventory(struct Medicine medicines[], int n);
+void saveInventory(struct Medicine medicines[], int n);
+void displayMedicines(struct Medicine medicines[], int n);
+void displayInventory(struct Medicine medicines[], int n);
+int searchMedicineByID(struct Medicine medicines[], int n, int id);
+int searchMedicineByName(struct Medicine medicines[], int n, char name[]);
+void searchMedicine(struct Medicine medicines[], int n);
+void purchaseMedicine(struct Medicine medicines[], int n, char members[][10], int memberCount);
+void generateBill(struct CartItem cart[], int cartCount, float subtotal, char customerName[], char membershipNo[], int isMember);
+void saveReceipt(struct CartItem cart[], int cartCount, float subtotal, float membershipDiscount, float bulkDiscount, float vat, float netPayable, int totalQty, char customerName[], char membershipNo[], char dateStr[], char timeStr[]);
+void logSale(struct CartItem cart[], int cartCount, char customerName[], char membershipNo[], char dateStr[], char timeStr[]);
+void restockMedicine(struct Medicine medicines[], int n);
+void getDateTimeStrings(char dateStr[], char timeStr[], char monthYearStr[]);
+void showSalesReport(struct Medicine medicines[], int n);
+
 /* Reads inventory.txt (the "database" file) and fills the medicines array
    with the saved id, name, price and stock. If the file does not exist yet
    (first run), it simply keeps the default values and creates the file. */
