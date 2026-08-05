@@ -27,6 +27,13 @@ struct CartItem
     float total;
 };
 
+/* One member record: id and name for membership validation */
+struct Member
+{
+    char id[10];
+    char name[50];
+};
+
 /* Function prototypes */
 void loadInventory(struct Medicine medicines[], int n);
 void saveInventory(struct Medicine medicines[], int n);
@@ -35,13 +42,15 @@ void displayInventory(struct Medicine medicines[], int n);
 int searchMedicineByID(struct Medicine medicines[], int n, int id);
 int searchMedicineByName(struct Medicine medicines[], int n, char name[]);
 void searchMedicine(struct Medicine medicines[], int n);
-void purchaseMedicine(struct Medicine medicines[], int n, char members[][10], int memberCount);
+void purchaseMedicine(struct Medicine medicines[], int n, struct Member members[], int memberCount);
 void generateBill(struct CartItem cart[], int cartCount, float subtotal, char customerName[], char membershipNo[], int isMember);
 void saveReceipt(struct CartItem cart[], int cartCount, float subtotal, float membershipDiscount, float bulkDiscount, float vat, float netPayable, int totalQty, char customerName[], char membershipNo[], char dateStr[], char timeStr[]);
 void logSale(struct CartItem cart[], int cartCount, char customerName[], char membershipNo[], char dateStr[], char timeStr[]);
 void restockMedicine(struct Medicine medicines[], int n);
 void getDateTimeStrings(char dateStr[], char timeStr[], char monthYearStr[]);
-void clearInputBuffer(void);
+void loadMemberships(struct Member members[], int *memberCount);
+int findMemberIndex(struct Member members[], int memberCount, char id[]);
+int validateMember(struct Member members[], int memberCount, char membershipNo[], char customerName[]);
 void showSalesReport(struct Medicine medicines[], int n);
 
 /* Load inventory from file or create file */
@@ -85,12 +94,77 @@ void saveInventory(struct Medicine medicines[], int n)
     fclose(fp);
 }
 
-/* Discard the rest of the current input line */
-void clearInputBuffer(void)
+/* Load memberships from file */
+void loadMemberships(struct Member members[], int *memberCount)
 {
-    int c;
-    while ((c = getchar()) != '\n' && c != EOF)
-        ;
+    FILE *fp = fopen("members.txt", "r");
+    char line[100];
+    *memberCount = 0;
+
+    if (fp == NULL)
+    {
+        fp = fopen("members.txt", "w");
+        if (fp != NULL)
+        {
+            fprintf(fp, "0152,John Doe\n");
+            fprintf(fp, "0210,Jane Smith\n");
+            fprintf(fp, "0333,Alice Johnson\n");
+            fprintf(fp, "0450,Bob Brown\n");
+            fprintf(fp, "0521,Charlie Lee\n");
+            fclose(fp);
+        }
+        fp = fopen("members.txt", "r");
+        if (fp == NULL)
+        {
+            return;
+        }
+    }
+
+    while (*memberCount < MAX_MEMBERS && fgets(line, sizeof(line), fp) != NULL)
+    {
+        char *comma = strchr(line, ',');
+        if (comma == NULL)
+            continue;
+
+        *comma = '\0';
+        strncpy(members[*memberCount].id, line, sizeof(members[*memberCount].id) - 1);
+        members[*memberCount].id[sizeof(members[*memberCount].id) - 1] = '\0';
+
+        strncpy(members[*memberCount].name, comma + 1, sizeof(members[*memberCount].name) - 1);
+        members[*memberCount].name[sizeof(members[*memberCount].name) - 1] = '\0';
+        members[*memberCount].name[strcspn(members[*memberCount].name, "\n")] = '\0';
+
+        (*memberCount)++;
+    }
+
+    fclose(fp);
+}
+
+int findMemberIndex(struct Member members[], int memberCount, char id[])
+{
+    int i;
+    for (i = 0; i < memberCount; i++)
+    {
+        if (strcmp(members[i].id, id) == 0)
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+
+int validateMember(struct Member members[], int memberCount, char membershipNo[], char customerName[])
+{
+    int index = findMemberIndex(members, memberCount, membershipNo);
+    if (index == -1)
+    {
+        return -1;
+    }
+    if (strcmp(members[index].name, customerName) == 0)
+    {
+        return index;
+    }
+    return -1;
 }
 
 /* Print medicine list */
@@ -155,33 +229,18 @@ void searchMedicine(struct Medicine medicines[], int n)
     char name[30];
 
     printf("\nSearch by:\n1. Medicine ID\n2. Medicine Name\nEnter Choice: ");
-    if (scanf("%d", &choice) != 1)
-    {
-        printf("Invalid Choice.\n");
-        clearInputBuffer();
-        return;
-    }
+    scanf("%d", &choice);
 
     if (choice == 1)
     {
         printf("Enter Medicine ID: ");
-        if (scanf("%d", &id) != 1)
-        {
-            printf("Invalid ID.\n");
-            clearInputBuffer();
-            return;
-        }
+        scanf("%d", &id);
         index = searchMedicineByID(medicines, n, id);
     }
     else if (choice == 2)
     {
         printf("Enter Medicine Name: ");
-        if (scanf("%29s", name) != 1)
-        {
-            printf("Invalid input.\n");
-            clearInputBuffer();
-            return;
-        }
+        scanf("%29s", name);
         index = searchMedicineByName(medicines, n, name);
     }
     else
@@ -211,14 +270,14 @@ void searchMedicine(struct Medicine medicines[], int n)
 }
 
 /* Process purchase, then bill and log sale */
-void purchaseMedicine(struct Medicine medicines[], int n, char members[][10], int memberCount)
+void purchaseMedicine(struct Medicine medicines[], int n, struct Member members[], int memberCount)
 {
     struct CartItem cart[MAX_CART];
     int cartCount = 0;
     char customerName[50];
     char membershipNo[10];
     char choice;
-    int i, id, qty, index;
+    int id, qty, index;
     int idResult, qtyResult;
     float subtotal = 0;
     int isMember = 0;
@@ -241,12 +300,17 @@ void purchaseMedicine(struct Medicine medicines[], int n, char members[][10], in
     fgets(membershipNo, sizeof(membershipNo), stdin);
     membershipNo[strcspn(membershipNo, "\n")] = '\0';
 
-    for (i = 0; i < memberCount; i++)
+    if (strcmp(membershipNo, "0") != 0 && strlen(membershipNo) > 0)
     {
-        if (strcmp(members[i], membershipNo) == 0)
+        int memberIndex = validateMember(members, memberCount, membershipNo, customerName);
+        if (memberIndex >= 0)
         {
             isMember = 1;
-            break;
+        }
+        else
+        {
+            printf("Membership not found or name does not match. No membership discount will be applied.\n");
+            strcpy(membershipNo, "0");
         }
     }
 
@@ -314,11 +378,7 @@ void purchaseMedicine(struct Medicine medicines[], int n, char members[][10], in
         }
 
         printf("Do you want to buy more? (Y/N): ");
-        if (scanf(" %c", &choice) != 1)
-        {
-            clearInputBuffer();
-            break;
-        }
+        scanf(" %c", &choice);
 
     } while (choice == 'Y' || choice == 'y');
 
@@ -497,12 +557,7 @@ void restockMedicine(struct Medicine medicines[], int n)
     int id, qty, index;
 
     printf("\nEnter Medicine ID to Restock: ");
-    if (scanf("%d", &id) != 1)
-    {
-        printf("Invalid Medicine ID.\n");
-        clearInputBuffer();
-        return;
-    }
+    scanf("%d", &id);
 
     index = searchMedicineByID(medicines, n, id);
     if (index == -1)
@@ -512,12 +567,7 @@ void restockMedicine(struct Medicine medicines[], int n)
     }
 
     printf("Enter Quantity to Add: ");
-    if (scanf("%d", &qty) != 1)
-    {
-        printf("Invalid Quantity.\n");
-        clearInputBuffer();
-        return;
-    }
+    scanf("%d", &qty);
 
     if (qty <= 0)
     {
@@ -685,14 +735,14 @@ int main()
         {109, "Cetirizine", 7, 55},
         {110, "Ibuprofen", 14, 45}};
 
-    /* Membership numbers */
-    char members[MAX_MEMBERS][10] = {"0152", "0210", "0333", "0450", "0521"};
-
+    struct Member members[MAX_MEMBERS];
+    int memberCount = 0;
     int choice;
     int scanResult;
 
-    /* Load inventory from file */
+    /* Load inventory and memberships from file */
     loadInventory(medicines, MAX_MEDICINES);
+    loadMemberships(members, &memberCount);
 
     printf("=====================================\n");
     printf("    PHARMACY MANAGEMENT SYSTEM\n");
@@ -729,7 +779,7 @@ int main()
             searchMedicine(medicines, MAX_MEDICINES);
             break;
         case 3:
-            purchaseMedicine(medicines, MAX_MEDICINES, members, MAX_MEMBERS);
+            purchaseMedicine(medicines, MAX_MEDICINES, members, memberCount);
             break;
         case 4:
             restockMedicine(medicines, MAX_MEDICINES);
